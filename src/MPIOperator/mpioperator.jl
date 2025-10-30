@@ -1,7 +1,6 @@
 ## This shallow struct is used to indicate that each LazyMIPOperator should be evaluated on each rank and the result is to be reduced across all ranks using MPI.Allreduce
 struct MPIOperator{O,T}
     parent::O
-    reduction::T # usually '+'
 end
 
 function Base.parent(op::MPIOperator{O,T})::O where {O,T}
@@ -10,7 +9,7 @@ end
 
 function (Op::MPIOperator{O,T})(x::S) where {O,T,S}
     y_per_rank = parent(x)
-    y = MPI.allreduce(y_per_rank, Op.reduction, MPI.COMM_WORLD)
+    y = MPI.allreduce(y_per_rank, +, MPI.COMM_WORLD)
     return y
 end
 

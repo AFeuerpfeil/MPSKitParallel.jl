@@ -1,9 +1,19 @@
 name = "MPSKitParallel"
 uuid = "9e7a2049-d464-45e7-afa7-8ebdb5f1c98e"
-authors = ["Andreas Feuerpfeil |andreas.feuerpfeil@uni-wuerzburg.de>"]
 version = "1.0.0-DEV"
+authors = ["Andreas Feuerpfeil |andreas.feuerpfeil@uni-wuerzburg.de>"]
+
+[deps]
+MPSKit = "bb1c41ca-d63c-52ed-829e-0820dda26502"
+MacroTools = "1914dd2f-81c6-5fcd-8719-6d5c9610ff09"
+TensorKit = "07d1fe3e-3e46-537d-9eac-e9e13d0d4cec"
+TypedDelegation = "bc724e2e-2423-57c2-8f10-788c81380fc8"
 
 [compat]
+MPSKit = "0.13.8"
+MacroTools = "0.5.16"
+TensorKit = "0.15.2"
+TypedDelegation = "0.6.0"
 julia = "1.6.7"
 
 [extras]

@@ -12,7 +12,7 @@ export LazyMPISum
 using TensorKit
 using MPSKit
 using MPI
-
+using MacroTools
 
 
 import MPSKit: environments

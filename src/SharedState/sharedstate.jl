@@ -1,6 +1,6 @@
 ## This defines functionality that automatically guarantees that only the root rank can change the MPS and that all changes are synchronized across all ranks.#
 const _mps_types = [FiniteMPS, InfiniteMPS, MultilineMPS, WindowMPS]
-const _abstract_mps_types = [AbstractFiniteMPS, AbstractInfiniteMPS, Multiline{<:InfiniteMPS}, AbstractFiniteMPS]
+const _abstract_mps_types = [MPSKit.AbstractFiniteMPS, MPSKit.AbstractInfiniteMPS, MPSKit.Multiline, MPSKit.AbstractFiniteMPS]
 
 for (mpstype, abstractmpstype) in zip(_mps_types, _abstract_mps_types)
     shared_name = Symbol("Shared", nameof(mpstype))
@@ -17,17 +17,6 @@ for (mpstype, abstractmpstype) in zip(_mps_types, _abstract_mps_types)
 end
 
 const AbstractSharedMPS = Union{SharedFiniteMPS, SharedInfiniteMPS, SharedMultilineMPS, SharedWindowMPS}
-
-## This is the relevant overload to make this MPI-safe for all MPS operations:
-function Base.setindex(ψ::AbstractSharedMPS, A::TensorMap, i::Int)
-    if MPI.Comm_rank(MPI.COMM_WORLD) == 0
-        parent(ψ)[i] = A
-    end
-    MPI.Barrier(MPI.COMM_WORLD)
-    A_shared = MPI.Bcast(A, 0, MPI.COMM_WORLD)
-    parent(ψ)[i] = A_shared
-    return ψ
-end
 
 Base.summary(io::IO, ::AbstractSharedMPS) = print(io, "SharedState wrapping:\n"); Base.summary(io, parent(ψ))
 Base.show(io::IO, ::MIME"text/plain", ψ::AbstractSharedMPS) = print(io, "SharedState wrapping:\n"); Base.show(io, MIME"text/plain"(), parent(ψ))
@@ -87,10 +76,6 @@ Base.complex(ψ::T) where {T<:AbstractSharedMPS} = T(complex(parent(ψ)))
 
 @inline function Base.getindex(ψ::AbstractSharedMPS, I::AbstractUnitRange)
     return Base.getindex(parent(ψ), I)
-end
-
-function Base.getproperty(ψ::AbstractSharedMPS, prop::Symbol)
-    return getproperty(parent(ψ), prop)
 end
 
 function Base.propertynames(::AbstractSharedMPS)

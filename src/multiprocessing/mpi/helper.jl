@@ -1,4 +1,4 @@
-function mpi_blocking(blocking::Bool)
+function mpi_barrier(blocking::Bool=true)
     blocking && MPI.Initializer() && (MPI.Barrier(MPI.COMM_WORLD))
     return nothing
 end
