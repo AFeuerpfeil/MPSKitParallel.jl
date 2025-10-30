@@ -1,0 +1,7 @@
+TODO:
+1. Overload functions that explicitly take some kind of MPO. Issue: In practice, I would just have to copy them exactly, because they call more low-level functions like AC_Hamiltonian, which have been overloaded correctly already! The best solution would be to not make these restrictments in MPSKit (currently this is e.g. sometimes solves via Union{O, LazySum{O}}.)
+Examples are: grassmann.jl, ED.jl
+2. Check that multilinempo's work correctly. As far as I see it, they should if we define our objects ad MultilineMPO(MPIOperator(H)), but this needs testing.
+3. Support timestep functionality like WII and tylorcluster.jl etc..
+4. Overload physical_space etc.. functions!
+5. Overload multilinemps.jl

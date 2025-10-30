@@ -1,0 +1,1 @@
+function MPSKit.infinite_temperature_density_matrix()
