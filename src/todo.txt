@@ -3,5 +3,5 @@ TODO:
 Examples are: grassmann.jl, ED.jl
 2. Check that multilinempo's work correctly. As far as I see it, they should if we define our objects ad MultilineMPO(MPIOperator(H)), but this needs testing.
 3. Support timestep functionality like WII and tylorcluster.jl etc..
-4. Overload physical_space etc.. functions!
 5. Overload multilinemps.jl
+6. Issue: Base.getproperty is already overloaded for MultilineMPS, QP, MultilineQP, WindowMPS, FiniteMPS

@@ -22,8 +22,8 @@ function mpi_rank()
         return 0
     end
 end
-function mpi_is_root()
-    return mpi_rank() == 0
+function mpi_is_root(root=Cint(0))
+    return mpi_rank() == root
 end
 
 function mpi_execute_on_root(F::Function, args...; blocking::Bool, kwargs...)
