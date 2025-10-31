@@ -5,24 +5,16 @@ const _tag_shift = 1_000
 function split_buffer(vec::Vector{UInt8})
     len = length(vec)
     N = cld(len, _mpi_message_size_limit)  # Number of pieces
-    @show N
     if N == 1
-        return [MPI.Buffer(vec)]
+        return MPI.Buffer(vec)
     end
     # Create the splits
-    splits = Vector{Vector{UInt8}}(undef, N)
-    start_idx = 1
-    for i in 1:N
-        end_idx = start_idx + _mpi_message_size_limit - 1
-
-        # Slice the vector for the current piece
-        splits[i] = vec[start_idx:end_idx]
-
-        # Update the starting index for the next piece
-        start_idx = end_idx + 1
+    ranges=map(1:N) do i
+        start_idx = (i-1)*_mpi_message_size_limit + 1
+        end_idx = min(i*_mpi_message_size_limit, len)
+        return start_idx:end_idx
     end
-    splits[N] = vec[start_idx:end]
-    return MPI.Buffer.(splits)
+    return MPI.Buffer.(@view vec[r] for r in ranges)
 end
 
 large_send(obj, comm::Comm; dest::Integer, tag::Integer=0) = large_send(obj, dest, tag, comm)
@@ -31,12 +23,16 @@ function large_send(obj, dest::Integer, tag::Integer, comm::Comm)
     buf = split_buffer(buf)
     return Large_send(buf, dest, tag, comm)
 end
-
-function Large_send(buf::Vector{MPI.Buffer}, dest::Integer, tag::Integer, comm::Comm)
+function Large_send(buf::MPI.Buffer, dest::Integer, tag::Integer, comm::Comm)
+    MPI.send(buf.count, dest, tag, comm)
+    MPI.Send(buf, dest, tag + _tag_shift, comm)
+    return nothing
+end
+function Large_send(buf::Vector{<:MPI.Buffer}, dest::Integer, tag::Integer, comm::Comm)
     counts = map(x -> x.count, buf)
-    MPI.send(counts, comm; dest=dest, tag=tag)
+    MPI.send(counts, dest, tag, comm)
     for i in eachindex(buf)
-        MPI.Send(buf[i], comm; dest=dest, tag=tag + i * _tag_shift)
+        MPI.Send(buf[i], dest, tag + i * _tag_shift, comm)
     end
     return nothing
 end
@@ -47,16 +43,14 @@ end
 
 function large_receive(source::Integer, tag::Integer, comm::Comm, status::Union{Ref{Status},Nothing})
     buf_sizes = MPI.recv(comm; source=source, tag=tag)
-    if sum(buf_sizes) <= _mpi_message_size_limit
-        return MPI.recv(comm; source=source, tag=tag + _tag_shift, status=status)
+    if buf_sizes isa Number
+        recv_buf = Vector{UInt8}(undef, buf_sizes)
+        MPI.Recv!(recv_buf, comm; source=source, tag=tag + _tag_shift)
+        return MPI.deserialize(recv_buf)
     end
     recv_buf = map(x -> Array{UInt8}(undef, x), buf_sizes)
     for i in eachindex(recv_buf)
-        if !(tag == MPI.API.MPI_ANY_TAG[])
-            tag_i = tag + i * _tag_shift
-        else
-            tag_i = tag
-        end
+        tag_i = tag + i * _tag_shift
         MPI.Recv!(recv_buf[i], comm; source=source, tag=tag_i)
     end
     return MPI.deserialize(reduce(vcat, recv_buf))
@@ -66,13 +60,29 @@ large_bcast(obj, comm::Comm; root::Integer=Cint(0)) = large_bcast(obj, root, com
 
 function large_bcast(obj, root::Integer, comm::Comm)
     isroot = Comm_rank(comm) == root
-    counts = Vector{Int}()
+    N = 1
+    count=0
+    counts=Vector{Int}()
     if isroot
         buf = MPI.serialize(obj)
         buf = split_buffer(buf)
-        counts = map(x -> x.count, buf)
+        N = buf isa Vector ? length(buf) : 1
+        if N == 1
+            count=buf.count
+        else
+            counts = map(x -> x.count, buf)
+        end
     end
-    Bcast!(counts, root, comm)
+    Bcast!(N, root, comm)
+    if N==1
+        Bcast!(count, root, comm)
+        if !isroot
+            buf = Array{UInt8}(undef, count)
+        end
+        buf = Bcast!(buf, root, comm)
+        return MPI.deserialize(buf)
+    end
+    counts = Bcast!(counts, root, comm)
     if !isroot
         buf = [Array{UInt8}(undef, c) for c in counts]
     end
@@ -93,9 +103,11 @@ function large_allreduce(obj, op, comm::Comm; root::Integer=Cint(0))
     count = length(buf)
 
     counts = Allgather(count, MPI.COMM_WORLD)
-
+    @show counts
     if all(counts .<= _mpi_message_size_limit)
         resbuf = MPI.allreduce(buf, op, comm)
+        @show typeof(resbuf)
+        @show typeof(MPI.deserialize(resbuf))
         return MPI.deserialize(resbuf)
     end
     buf = split_buffer(buf)

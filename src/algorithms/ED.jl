@@ -1,4 +1,4 @@
-function exact_diagonalization(
+function MPSKit.exact_diagonalization(
         H::MPIOperator{<:FiniteMPOHamiltonian};
         sector = one(sectortype(H)), num::Int = 1, which::Symbol = :SR,
         alg = Defaults.alg_eigsolve(; dynamic_tols = false)

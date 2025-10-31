@@ -8,6 +8,7 @@ include("MPIOperator/environments.jl")
 include("MPIOperator/ortho.jl")
 include("MPIOperator/transfermatrix.jl")
 include("algorithms/expval.jl")
+include("algorithms/ED.jl")
+include("algorithms/grassmann.jl")
 
-include("SharedMPS/mpipropertywrapper.jl")
 include("SharedMPS/sharedmps.jl")
