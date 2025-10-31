@@ -85,7 +85,7 @@ function large_bcast(obj, root::Integer, comm::Comm)
     return obj
 end
 
-function large_allreduce(obj, comm::Comm; root::Integer=Cint(0))
+function large_allreduce(obj, op, comm::Comm; root::Integer=Cint(0))
     buf = nothing
     count = 0
 
@@ -95,7 +95,8 @@ function large_allreduce(obj, comm::Comm; root::Integer=Cint(0))
     counts = Allgather(count, MPI.COMM_WORLD)
 
     if all(counts .<= _mpi_message_size_limit)
-        return MPI.allreduce(buf, +, comm)
+        resbuf = MPI.allreduce(buf, op, comm)
+        return MPI.deserialize(resbuf)
     end
     buf = split_buffer(buf)
     counts = map(x -> x.count, buf)
@@ -103,13 +104,45 @@ function large_allreduce(obj, comm::Comm; root::Integer=Cint(0))
 
     theta = nothing
     if mpi_is_root(root)
-        theta = large_receive(MPI.COMM_WORLD; source = 1, tag = 1)
-        for i in 2:length(counts)
-            theta += large_receive(MPI.COMM_WORLD; source = i, tag = 1)
+        theta = obj
+        for i in 1:length(counts)-1
+            theta = op(theta, large_receive(MPI.COMM_WORLD; source = i, tag = i))
         end
     else
         Large_send(buf, root, mpi_rank(), comm)
     end
 
     theta = large_bcast(theta, comm; root = root)
+    return theta
+end
+
+function large_allreduce(obj, op::typeof(+), comm::Comm; root::Integer=Cint(0))
+    buf = nothing
+    count = 0
+
+    buf = MPI.serialize(obj)
+    count = length(buf)
+
+    counts = MPI.Allgather(count, MPI.COMM_WORLD)
+
+    if all(counts .<= _mpi_message_size_limit)
+        resbuf = MPI.Allreduce(buf, op, comm)
+        return MPI.deserialize(resbuf)
+    end
+    buf = split_buffer(buf)
+    counts = map(x -> x.count, buf)
+    counts = Gather(counts, MPI.COMM_WORLD; root = root)
+
+    theta = nothing
+    if mpi_is_root(root)
+        theta = obj
+        for i in 1:length(counts)-1
+            theta .+= large_receive(MPI.COMM_WORLD; source = i, tag = i)
+        end
+    else
+        Large_send(buf, root, mpi_rank(), comm)
+    end
+
+    theta = large_bcast(theta, comm; root = root)
+    return theta
 end

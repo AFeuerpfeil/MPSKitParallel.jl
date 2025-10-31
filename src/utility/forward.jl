@@ -15,8 +15,8 @@ macro forward(ex, fs)
   @capture(ex, T_.field_) || error("Syntax: @forward T.x f, g, h")
   T = esc(T)
   fs = isexpr(fs, :tuple) ? map(esc, fs.args) : [esc(fs)]
-  :($([:($f(x::$T, args...) =
-         (Base.@inline; $f(x.$field, args...)))
+  :($([:($f(x::$T, args...; kwargs...) =
+         (Base.@inline; $f(x.$field, args...; kwargs...)))
        for f in fs]...);
     nothing)
 end
@@ -40,8 +40,8 @@ macro forward2(ex, fs)
   @capture(ex, T_.field_) || error("Syntax: @forward2 T.x f, g, h")
   T = esc(T)
   fs = isexpr(fs, :tuple) ? map(esc, fs.args) : [esc(fs)]
-  :($([:($f(x::$T, y::$T, args...) =
-         (Base.@inline; $f(x.$field, y.$field, args...)))
+  :($([:($f(x::$T, y::$T, args...; kwargs...) =
+         (Base.@inline; $f(x.$field, y.$field, args...; kwargs...)))
        for f in fs]...);
     nothing)
 end
@@ -59,8 +59,8 @@ macro forward_1_1(ex, fs)
   @capture(ex, T_.field_) || error("Syntax: @forward2 T.x f, g, h")
   T = esc(T)
   fs = isexpr(fs, :tuple) ? map(esc, fs.args) : [esc(fs)]
-  :($([:($f(a,x::$T, args...) =
-         (Base.@inline; $f(a, x.$field, args...)))
+  :($([:($f(a,x::$T, args...; kwargs...) =
+         (Base.@inline; $f(a, x.$field, args...; kwargs...)))
        for f in fs]...);
     nothing)
 end
@@ -69,8 +69,17 @@ macro forward_2_1(ex, fs)
   @capture(ex, T_.field_) || error("Syntax: @forward2 T.x f, g, h")
   T = esc(T)
   fs = isexpr(fs, :tuple) ? map(esc, fs.args) : [esc(fs)]
-  :($([:($f(a,b,x::$T, y::$T, args...) =
-         (Base.@inline; $f(a, b, x.$field, y.$field, args...)))
+  :($([:($f(a,b,x::$T, args...; kwargs...) =
+         (Base.@inline; $f(a, b, x.$field, args...; kwargs...)))
+       for f in fs]...);
+    nothing)
+end
+macro forward_2_2(ex, fs)
+  @capture(ex, T_.field_) || error("Syntax: @forward2 T.x f, g, h")
+  T = esc(T)
+  fs = isexpr(fs, :tuple) ? map(esc, fs.args) : [esc(fs)]
+  :($([:($f(a,b,x::$T, y::$T, args...; kwargs...) =
+         (Base.@inline; $f(a, b, x.$field, y.$field, args...; kwargs...)))
        for f in fs]...);
     nothing)
 end
@@ -78,8 +87,8 @@ macro forward_3_1(ex, fs)
   @capture(ex, T_.field_) || error("Syntax: @forward2 T.x f, g, h")
   T = esc(T)
   fs = isexpr(fs, :tuple) ? map(esc, fs.args) : [esc(fs)]
-  :($([:($f(a,b,c,x::$T, y::$T, args...) =
-         (Base.@inline; $f(a, b, c, x.$field, y.$field, args...)))
+  :($([:($f(a,b,c,x::$T, y::$T, args...; kwargs...) =
+         (Base.@inline; $f(a, b, c, x.$field, y.$field, args...; kwargs...)))
        for f in fs]...);
     nothing)
 end
@@ -87,8 +96,8 @@ macro forward_3_1_astype(ex, fs)
   @capture(ex, T_.field_) || error("Syntax: @forward2 T.x f, g, h")
   T = esc(T)
   fs = isexpr(fs, :tuple) ? map(esc, fs.args) : [esc(fs)]
-  :($([:($f(a,b,c,x::$T, y::$T, args...) =
-         (Base.@inline; $T($f(a, b, c, x.$field, y.$field, args...))))
+  :($([:($f(a,b,c,x::$T, y::$T, args...; kwargs...) =
+         (Base.@inline; $T($f(a, b, c, x.$field, y.$field, args...; kwargs...))))
        for f in fs]...);
     nothing)
 end
@@ -96,8 +105,8 @@ macro forward_astype(ex, fs)
   @capture(ex, T_.field_) || error("Syntax: @forward T.x f, g, h")
   T = esc(T)
   fs = isexpr(fs, :tuple) ? map(esc, fs.args) : [esc(fs)]
-  :($([:($f(x::$T, args...) =
-         (Base.@inline; $T($f(x.$field, args...))))
+  :($([:($f(x::$T, args...; kwargs...) =
+         (Base.@inline; $T($f(x.$field, args...; kwargs...))))
        for f in fs]...);
     nothing)
 end

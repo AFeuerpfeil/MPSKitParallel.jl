@@ -1,15 +1,21 @@
 ## This shallow struct is used to indicate that each LazyMIPOperator should be evaluated on each rank and the result is to be reduced across all ranks using MPI.Allreduce
-struct MPIOperator{O,T}
+struct MPIOperator{O}
     parent::O
+    function MPIOperator(parent::O) where {O}
+        if !MPI.Initialized()
+            @warn "MPI is currently not initialized. Please initialize MPI by running \n `using MPI; MPI.Init()` \n before creating an MPIOperator." maxlog=1
+        end
+        return new{O}(parent)
+    end
 end
 
-function Base.parent(op::MPIOperator{O,T})::O where {O,T}
+function Base.parent(op::MPIOperator{O})::O where {O}
     return op.parent
 end
 
-function (Op::MPIOperator{O,T})(x::S) where {O,T,S}
-    y_per_rank = parent(x)
-    y = MPI.allreduce(y_per_rank, +, MPI.COMM_WORLD)
+function (Op::MPIOperator{O})(x::S) where {O,S}
+    y_per_rank = parent(Op)(x)
+    y = large_allreduce(y_per_rank, +, MPI.COMM_WORLD)
     return y
 end
 
@@ -25,3 +31,5 @@ function Base.show(io::IOContext, op::MPIOperator)
     print(io, "MPIOperator wrapping:\n")
     show(io, parent(op))
 end
+
+@forward MPIOperator.parent Base.getindex
