@@ -32,4 +32,12 @@ function Base.show(io::IOContext, op::MPIOperator)
     show(io, parent(op))
 end
 
-@forward MPIOperator.parent Base.getindex
+@forward MPIOperator.parent Base.getindex, Base.size, Base.length, Base.iterate, Base.eltype, Base.axes, Base.similar, Base.eachindex, Base.lastindex, Base.setindex!, Base.isfinite
+@forward MPIOperator.parent LinearAlgebra.norm
+@forward MPIOperator.parent TensorKit.spacetype, TensorKit.sectortype,TensorKit.storagetype
+@forward MPIOperator.parent MPSKit.eachsite, MPSKit.left_virtualspace, MPSKit.right_virtualspace, MPSKit.physicsalspace
+@forward_astype MPIOperator.parent MPSKit.remove_orphans!
+@forward_astype MPIOperator.parent Base.:+, Base.:-, Base.:*, Base.:/, Base.:\, Base.:(^), Base.conj!, Base.conj, Base.copy,
+@forward_1_1_astype MPIOperator.parent Base.:*
+@forward_astype MPIOperator.parent VectorInterface.scale
+@forward2 MPIOperator.parent MPSKit._fuse_mpo_mpo

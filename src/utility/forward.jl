@@ -64,6 +64,15 @@ macro forward_1_1(ex, fs)
        for f in fs]...);
     nothing)
 end
+macro forward_1_1_astype(ex, fs)
+  @capture(ex, T_.field_) || error("Syntax: @forward2 T.x f, g, h")
+  T = esc(T)
+  fs = isexpr(fs, :tuple) ? map(esc, fs.args) : [esc(fs)]
+  :($([:($f(a,x::$T, args...; kwargs...) =
+         (Base.@inline; $T($f(a, x.$field, args...; kwargs...))))
+       for f in fs]...);
+    nothing)
+end
 
 macro forward_2_1(ex, fs)
   @capture(ex, T_.field_) || error("Syntax: @forward2 T.x f, g, h")
