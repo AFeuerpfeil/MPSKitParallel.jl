@@ -1,6 +1,6 @@
 
 function MPSKit.localupdate_step!(
-        it::IterativeSolver{<:VUMPS{S, MPIOperator{O}, E}}, state, scheduler = MPSKit.Defaults.scheduler[]
+        it::IterativeSolver{<:VUMPS}, state::VUMPSState{S, MPIOperator{O}, E}, scheduler = MPSKit.Defaults.scheduler[]
     ) where {S, O, E}
     alg_eigsolve = updatetol(it.alg_eigsolve, state.iter, state.ϵ)
     alg_orth = MPSKit.Defaults.alg_qr()
@@ -32,7 +32,7 @@ function MPSKit._localupdate_vumps_step!(
         _, AC = fixedpoint(Hac, AC₀, which, alg_eigsolve)
         Hc = C_hamiltonian(site, mps, operator, mps, envs)
         _, C = fixedpoint(Hc, C₀, which, alg_eigsolve)
-        return mpi_regauge!(AC, C; alg = alg_orth)
+        return mpi_execute_on_root_and_bcast(regauge!, AC, C; alg = alg_orth)
     end
 
     local AC, C
@@ -46,27 +46,28 @@ function MPSKit._localupdate_vumps_step!(
             _, C = fixedpoint(Hc, C₀, which, alg_eigsolve)
         end
     end
-    return mpi_regauge!(AC, C; alg = alg_orth)
+    return mpi_execute_on_root_and_bcast(regauge!, AC, C; alg = alg_orth)
 end
 
-function MPSKit.gauge_step!(it::IterativeSolver{<:VUMPS{S, MPIOperator{O}, E}}, state, ACs::AbstractVector) where {S, O, E}
+function MPSKit.gauge_step!(it::IterativeSolver{<:VUMPS}, state::VUMPSState{S, MPIOperator{O}, E}, ACs::AbstractVector) where {S, O, E}
     alg_gauge = updatetol(it.alg_gauge, state.iter, state.ϵ)
+    println("Gauging!")
     if mpi_is_root()
         psi = InfiniteMPS(ACs, state.mps.C[end]; alg_gauge.tol, alg_gauge.maxiter)
     else
         psi = nothing
     end
-    psi = large_bcast(psi, 0, MPI.COMM_WORLD)
+    psi = MPIHelper.bcast(psi, MPI.COMM_WORLD)
     return psi
 end
 
-function MPSKit.gauge_step!(it::IterativeSolver{<:VUMPS{S, MPIOperator{O}, E}}, state, ACs::AbstractMatrix) where {S, O, E}
+function MPSKit.gauge_step!(it::IterativeSolver{<:VUMPS}, state::VUMPSState{S, MPIOperator{O}, E}, ACs::AbstractMatrix) where {S, O, E}
     alg_gauge = updatetol(it.alg_gauge, state.iter, state.ϵ)
     if mpi_is_root()
         psi = MultilineMPS(ACs, @view(state.mps.C[:, end]); alg_gauge.tol, alg_gauge.maxiter)
     else
         psi = nothing
     end
-    psi = large_bcast(psi, 0, MPI.COMM_WORLD)
+    psi = MPIHelper.bcast(psi, 0, MPI.COMM_WORLD)
     return psi
 end

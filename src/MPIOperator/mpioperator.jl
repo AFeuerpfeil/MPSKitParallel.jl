@@ -1,4 +1,6 @@
 ## This shallow struct is used to indicate that each LazyMIPOperator should be evaluated on each rank and the result is to be reduced across all ranks using MPI.Allreduce
+## This is the MPI-parallelized version of a linear operator
+## If one added the flexibilty of choosing the reduction, one could also parallelize over products of functions etc...
 struct MPIOperator{O}
     parent::O
     function MPIOperator(parent::O) where {O}
@@ -15,7 +17,7 @@ end
 
 function (Op::MPIOperator{O})(x::S) where {O,S}
     y_per_rank = parent(Op)(x)
-    y = large_allreduce(y_per_rank, +, MPI.COMM_WORLD)
+    y = MPIHelper.allreduce(y_per_rank, +, MPI.COMM_WORLD)
     return y
 end
 

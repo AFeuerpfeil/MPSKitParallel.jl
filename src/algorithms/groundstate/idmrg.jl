@@ -6,9 +6,9 @@ function MPSKit._localupdate_sweep_idmrg!(ψ::AbstractMPS, H::MPIOperator, envs,
         _, ψ.AC[pos] = fixedpoint(h, ψ.AC[pos], :SR, alg_eigsolve)
         if pos == length(ψ)
             # AC needed in next sweep
-            ψ.AL[pos], ψ.C[pos] = mpi_left_orth(ψ.AC[pos])
+            ψ.AL[pos], ψ.C[pos] = mpi_execute_on_root_and_bcast(left_orth,ψ.AC[pos])
         else
-            ψ.AL[pos], ψ.C[pos] = mpi_left_orth!(ψ.AC[pos])
+            ψ.AL[pos], ψ.C[pos] = mpi_execute_on_root_and_bcast(left_orth!,ψ.AC[pos])
         end
         transfer_leftenv!(envs, ψ, H, ψ, pos + 1)
     end
@@ -33,7 +33,7 @@ function MPSKit._localupdate_sweep_idmrg!(ψ::AbstractMPS, H::MPIOperator, envs,
         h_ac2 = AC2_hamiltonian(pos, ψ, H, ψ, envs)
         _, ac2′ = fixedpoint(h_ac2, ac2, :SR, alg_eigsolve)
 
-        al, c, ar = mpi_svd_trunc!(ac2′; trunc = alg.trscheme, alg = alg.alg_svd)
+        al, c, ar = mpi_execute_on_root_and_bcast(svd_trunc!, ac2′; trunc = alg.trscheme, alg = alg.alg_svd)
         normalize!(c)
 
         ψ.AL[pos] = al
@@ -52,7 +52,7 @@ function MPSKit._localupdate_sweep_idmrg!(ψ::AbstractMPS, H::MPIOperator, envs,
     h_ac2 = AC2_hamiltonian(0, ψ, H, ψ, envs)
     _, ac2′ = fixedpoint(h_ac2, ac2, :SR, alg_eigsolve)
 
-    al, c, ar = mpi_svd_trunc!(ac2′; trunc = alg.trscheme, alg = alg.alg_svd)
+    al, c, ar = mpi_execute_on_root_and_bcast(svd_trunc!, ac2′; trunc = alg.trscheme, alg = alg.alg_svd)
     normalize!(c)
 
     ψ.AL[end] = al
@@ -75,7 +75,7 @@ function MPSKit._localupdate_sweep_idmrg!(ψ::AbstractMPS, H::MPIOperator, envs,
         h_ac2 = AC2_hamiltonian(pos, ψ, H, ψ, envs)
         _, ac2′ = fixedpoint(h_ac2, ac2, :SR, alg_eigsolve)
 
-        al, c, ar = mpi_svd_trunc!(ac2′; trunc = alg.trscheme, alg = alg.alg_svd)
+        al, c, ar = mpi_execute_on_root_and_bcast(svd_trunc!, ac2′; trunc = alg.trscheme, alg = alg.alg_svd)
         normalize!(c)
 
         ψ.AL[pos] = al
@@ -94,7 +94,7 @@ function MPSKit._localupdate_sweep_idmrg!(ψ::AbstractMPS, H::MPIOperator, envs,
     ac2 = AC2(ψ, 0; kind = :ACAR)
     h_ac2 = AC2_hamiltonian(0, ψ, H, ψ, envs)
     _, ac2′ = fixedpoint(h_ac2, ac2, :SR, alg_eigsolve)
-    al, c, ar = mpi_svd_trunc!(ac2′; trunc = alg.trscheme, alg = alg.alg_svd)
+    al, c, ar = mpi_execute_on_root_and_bcast(svd_trunc!, ac2′; trunc = alg.trscheme, alg = alg.alg_svd)
     normalize!(c)
 
     ψ.AL[end] = al
