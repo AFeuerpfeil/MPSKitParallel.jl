@@ -17,7 +17,7 @@ end
 
 function (Op::MPIOperator{O})(x::S) where {O,S}
     y_per_rank = parent(Op)(x)
-    y = MPIHelper.allreduce(y_per_rank, +, MPI.COMM_WORLD)
+    y = MPIHelper.allreduce(y_per_rank, Base.:+, MPI.COMM_WORLD)
     return y
 end
 

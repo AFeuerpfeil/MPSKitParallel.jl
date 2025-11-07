@@ -51,7 +51,6 @@ end
 
 function MPSKit.gauge_step!(it::IterativeSolver{<:VUMPS}, state::VUMPSState{S, MPIOperator{O}, E}, ACs::AbstractVector) where {S, O, E}
     alg_gauge = updatetol(it.alg_gauge, state.iter, state.ϵ)
-    println("Gauging!")
     if mpi_is_root()
         psi = InfiniteMPS(ACs, state.mps.C[end]; alg_gauge.tol, alg_gauge.maxiter)
     else
