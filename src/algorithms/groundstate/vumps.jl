@@ -11,6 +11,7 @@ function MPSKit.localupdate_step!(
     ACs = similar(mps.AC)
     dst_ACs = mps isa Multiline ? eachcol(ACs) : ACs
 
+    # TODO: If we have parallel = true, then one would even need 2 communicators per site!
     tforeach(eachsite(mps), src_ACs, src_Cs; scheduler) do site, AC₀, C₀
         dst_ACs[site] = MPSKit._localupdate_vumps_step!(
             site, mps, state.operator, state.envs, AC₀, C₀;
@@ -27,12 +28,13 @@ function MPSKit._localupdate_vumps_step!(
         parallel::Bool = false, alg_orth = MPSKit.Defaults.alg_qr(),
         alg_eigsolve = MPSKit.Defaults.eigsolver, which
     )
+    comm = operator.comm[site]
     if !parallel
         Hac = AC_hamiltonian(site, mps, operator, mps, envs)
         _, AC = fixedpoint(Hac, AC₀, which, alg_eigsolve)
         Hc = C_hamiltonian(site, mps, operator, mps, envs)
         _, C = fixedpoint(Hc, C₀, which, alg_eigsolve)
-        return mpi_execute_on_root_and_bcast(regauge!, AC, C; alg = alg_orth)
+        return mpi_execute_on_root_and_bcast(regauge!, AC, C; comm = comm, alg = alg_orth)
     end
 
     local AC, C
@@ -46,7 +48,7 @@ function MPSKit._localupdate_vumps_step!(
             _, C = fixedpoint(Hc, C₀, which, alg_eigsolve)
         end
     end
-    return mpi_execute_on_root_and_bcast(regauge!, AC, C; alg = alg_orth)
+    return mpi_execute_on_root_and_bcast(regauge!, AC, C; comm = comm, alg = alg_orth)
 end
 
 function MPSKit.gauge_step!(it::IterativeSolver{<:VUMPS}, state::VUMPSState{S, MPIOperator{O}, E}, ACs::AbstractVector) where {S, O, E}
@@ -67,6 +69,6 @@ function MPSKit.gauge_step!(it::IterativeSolver{<:VUMPS}, state::VUMPSState{S, M
     else
         psi = nothing
     end
-    psi = MPIHelper.bcast(psi, 0, MPI.COMM_WORLD)
+    psi = MPIHelper.bcast(psi, MPI.COMM_WORLD)
     return psi
 end

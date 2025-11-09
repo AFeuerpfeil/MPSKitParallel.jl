@@ -1,6 +1,7 @@
 include("utility/forward.jl")
 
 include("MPIOperator/mpioperator.jl")
+include("MPIOperator/mpskit.jl")
 include("MPIOperator/derivatives.jl")
 include("MPIOperator/environments.jl")
 include("MPIOperator/ortho.jl")

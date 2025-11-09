@@ -69,7 +69,7 @@ macro forward_1_1_astype(ex, fs)
   T = esc(T)
   fs = isexpr(fs, :tuple) ? map(esc, fs.args) : [esc(fs)]
   :($([:($f(a,x::$T, args...; kwargs...) =
-         (Base.@inline; $T($f(a, x.$field, args...; kwargs...))))
+         (Base.@inline; $T($f(a, x.$field, args...; kwargs...), x.reduction, x.comm)))
        for f in fs]...);
     nothing)
 end
@@ -106,7 +106,7 @@ macro forward_3_1_astype(ex, fs)
   T = esc(T)
   fs = isexpr(fs, :tuple) ? map(esc, fs.args) : [esc(fs)]
   :($([:($f(a,b,c,x::$T, y::$T, args...; kwargs...) =
-         (Base.@inline; $T($f(a, b, c, x.$field, y.$field, args...; kwargs...))))
+         (Base.@inline; $T($f(a, b, c, x.$field, y.$field, args...; kwargs...), x.reduction, x.comm)))
        for f in fs]...);
     nothing)
 end
@@ -115,7 +115,7 @@ macro forward_astype(ex, fs)
   T = esc(T)
   fs = isexpr(fs, :tuple) ? map(esc, fs.args) : [esc(fs)]
   :($([:($f(x::$T, args...; kwargs...) =
-         (Base.@inline; $T($f(x.$field, args...; kwargs...))))
+         (Base.@inline; $T($f(x.$field, args...; kwargs...), x.reduction, x.comm)))
        for f in fs]...);
     nothing)
 end

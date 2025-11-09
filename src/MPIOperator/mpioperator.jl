@@ -1,23 +1,22 @@
 ## This shallow struct is used to indicate that each LazyMIPOperator should be evaluated on each rank and the result is to be reduced across all ranks using MPI.Allreduce
 ## This is the MPI-parallelized version of a linear operator
-## If one added the flexibilty of choosing the reduction, one could also parallelize over products of functions etc...
-struct MPIOperator{O}
+struct MPIOperator{O, F, C}
     parent::O
-    function MPIOperator(parent::O) where {O}
-        if !MPI.Initialized()
-            @warn "MPI is currently not initialized. Please initialize MPI by running \n `using MPI; MPI.Init()` \n before creating an MPIOperator." maxlog=1
-        end
-        return new{O}(parent)
-    end
+    reduction::F
+    comm::C
+    MPIOperator{O, F, C}(parent::O, reduction::F=Base.:+, comm::C=MPI.COMM_WORLD) where {O, F, C} = new{O, F, C}(parent, reduction, comm)
+    MPIOperator{O, F}(parent::O, reduction::F=Base.:+, comm::C=MPI.COMM_WORLD) where {O, F, C} = new{O, F, C}(parent, reduction, comm)
+    MPIOperator{O}(parent::O, reduction::F=Base.:+, comm::C=MPI.COMM_WORLD) where {O, F, C} = new{O, F, C}(parent, reduction, comm)
+    MPIOperator(parent::O, reduction::F=Base.:+, comm::C=MPI.COMM_WORLD) where {O, F, C} = new{O, F, C}(parent, reduction, comm)
 end
 
-function Base.parent(op::MPIOperator{O})::O where {O}
+function Base.parent(op::MPIOperator{O, F})::O where {O, F}
     return op.parent
 end
 
-function (Op::MPIOperator{O})(x::S) where {O,S}
+function (Op::MPIOperator{O, F})(x::S) where {O, F, S}
     y_per_rank = parent(Op)(x)
-    y = MPIHelper.allreduce(y_per_rank, Base.:+, MPI.COMM_WORLD)
+    y = MPIHelper.allreduce(y_per_rank, Op.reduction, Op.comm)
     return y
 end
 
@@ -25,12 +24,12 @@ Base.:*(Op::MPIOperator, v) = Op(v)
 (Op::MPIOperator)(x, ::Number) = Op(x)
 
 function Base.show(io::IO, ::MIME"text/plain", op::MPIOperator)
-    print(io, "MPIOperator wrapping:\n")
+    print(io, "MPIOperator with communicator $(op.comm) and reduction $(op.reduction) wrapping:\n")
     show(io, MIME"text/plain"(), parent(op))
 end
 Base.show(io::IO, op::MPIOperator) = show(convert(IOContext, io), op)
 function Base.show(io::IOContext, op::MPIOperator)
-    print(io, "MPIOperator wrapping:\n")
+    print(io, "MPIOperator with communicator $(op.comm) and reduction $(op.reduction) wrapping:\n")
     show(io, parent(op))
 end
 

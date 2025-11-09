@@ -8,7 +8,7 @@ using MPIHelper
 using MPI
 MPSKit.Defaults.set_scheduler!(:serial)
 
-MPI.Init()
+MPI.Init(;threadlevel=:multiple)
 mpi_rank() = MPI.Comm_rank(MPI.COMM_WORLD)
 mpi_size() = MPI.Comm_size(MPI.COMM_WORLD)
 
@@ -35,12 +35,19 @@ else
 end
 H_mpi = MPIOperator(H_mpi)
 
-
 println("Hey, I am rank=$(mpi_rank()) out of $(mpi_size()) processes.")
 
 ψ_infmpi, envs_infmpi, delta_infmpi = find_groundstate(state, H_mpi, verbosity=1);  ## This tests VUMPS and GradientGrassmann
 
 println("Hey, I am rank=$(mpi_rank()) out of $(mpi_size()) processes. abs(dot(ψ_inf, ψ_infmpi)) = $(abs(dot(ψ_inf, ψ_infmpi)))")
+
+MPSKit.Defaults.set_scheduler!(:dynamic)
+
+ψ_infmpi, envs_infmpi, delta_infmpi = find_groundstate(state, H_mpi, verbosity=1);  ## This tests VUMPS and GradientGrassmann with unit cell parallelization
+
+println("Hey, I am rank=$(mpi_rank()) out of $(mpi_size()) processes. abs(dot(ψ_inf, ψ_infmpi)) = $(abs(dot(ψ_inf, ψ_infmpi)))")
+
+
 
 ψ_infmpi, envs_infmpi, delta_infmpi = find_groundstate(state, H_mpi, IDMRG2(; maxiter = 20, tol = 1.0e-12, verbosity=1, trscheme=truncrank(50)));
 
